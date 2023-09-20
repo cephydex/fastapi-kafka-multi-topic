@@ -1,0 +1,76 @@
+version: "3"
+
+services:
+  producer:
+    container_name: kaf1-app
+    build: producer
+    command: run dev-server
+    ports:
+      - 7073:8000
+    volumes:
+      - "./producer:/app"
+
+  consumer:
+    build: consumer
+    container_name: kaf1-clt
+    restart: "unless-stopped"
+    ports:
+      - "7071:8000"
+    volumes:
+      - "./consumer:/app"
+    depends_on:
+      - kafka1
+
+  consumer2:
+    build: consumer2
+    container_name: kaf-clt2
+    restart: "unless-stopped"
+    ports:
+      - "7072:8000"
+    volumes:
+      - "./consumer2:/app"
+    depends_on:
+      - kafka1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kaf1-ui
+    ports:
+      - "7070:8080"
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:9092
+
+  zookeeper:
+    restart: always
+    image: docker.io/bitnami/zookeeper:3.8
+    container_name: kaf1-zk
+    ports:
+      - "2182:2181"
+    volumes:
+      - "zk-volume:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka1:
+    restart: always
+    image: docker.io/bitnami/kafka:3.3
+    container_name: kaf1-kf
+    ports:
+      - "9094:9093"
+    volumes:
+      - "kfk-volume:/bitnami"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka1:9092,EXTERNAL://localhost:9093
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+    depends_on:
+      - zookeeper
+volumes:
+  kfk-volume:
+  zk-volume:
